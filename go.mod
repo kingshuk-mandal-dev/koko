@@ -1,4 +1,3 @@
-//module example.com/kingshuk/koko
 module github.com/kingshuk-mandal-dev/koko
 //module github.com/redhat-nfvpe/koko
 
