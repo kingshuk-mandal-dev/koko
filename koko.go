@@ -13,7 +13,7 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	//"github.com/redhat-nfvpe/koko/api"
-	"github.com/kingshuk-mandal-dev/koko/API"
+	"github.com/kingshuk-mandal-dev/koko/api"
 	"github.com/vishvananda/netlink"
 )
 

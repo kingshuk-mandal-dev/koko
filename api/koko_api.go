@@ -15,6 +15,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/utils/sysctl"
 	"github.com/vishvananda/netlink"
 
+	crand "crypto/rand"
 	docker "github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -67,13 +68,14 @@ type MacVLan struct {
 // getRandomIFName generates random string for unique interface name
 func getRandomIFName() string {
 
-	RandomCrypto, _ := rand.Prime(rand.Reader, 128)
-	fmt.Println(RandomCrypto.Uint64())
-	fmt.Println(RandomCrypto.Uint64() % 16777216)
-	fmt.Println("--------")
-	RandomCrypto, _ = rand.Prime(rand.Reader, 128)
-	fmt.Println(RandomCrypto.Uint64())
-	fmt.Println(RandomCrypto.Uint64() % 16777216)
+	//RandomCrypto, _ := crand.Prime(rand.Reader, 128)
+	//fmt.Println(RandomCrypto.Uint64())
+	//fmt.Println(RandomCrypto.Uint64() % 16777216)
+	//fmt.Println("--------")
+	RandomCrypto, _ = crand.Prime(crand.Reader, 128)
+	//fmt.Println(RandomCrypto.Uint64())
+	//fmt.Println(RandomCrypto.Uint64() % 16777216)
+	fmt.Sprintf("koko%d", uint32(RandomCrypto.Uint64()%16777216))
 
 	return fmt.Sprintf("koko%d", rand.Uint32())
 }
