@@ -68,7 +68,7 @@ type MacVLan struct {
 // getRandomIFName generates random string for unique interface name
 func getRandomIFName() string {
 
-	//RandomCrypto, _ := crand.Prime(rand.Reader, 128)
+	RandomCrypto, _ := crand.Prime(rand.Reader, 128)
 	//fmt.Println(RandomCrypto.Uint64())
 	//fmt.Println(RandomCrypto.Uint64() % 16777216)
 	//fmt.Println("--------")
