@@ -68,16 +68,12 @@ type MacVLan struct {
 // getRandomIFName generates random string for unique interface name
 func getRandomIFName() string {
 
-	RandomCrypto, _ := crand.Prime(rand.Reader, 128)
+	RandomCrypto, _ := crand.Prime(crand.Reader, 128)
 	//fmt.Println(RandomCrypto.Uint64())
 	//fmt.Println(RandomCrypto.Uint64() % 16777216)
-	//fmt.Println("--------")
-	RandomCrypto, _ = crand.Prime(crand.Reader, 128)
-	//fmt.Println(RandomCrypto.Uint64())
-	//fmt.Println(RandomCrypto.Uint64() % 16777216)
-	fmt.Sprintf("koko%d", uint32(RandomCrypto.Uint64()%16777216))
+	return fmt.Sprintf("koko%d", uint32(RandomCrypto.Uint64()%16777216))
 
-	return fmt.Sprintf("koko%d", rand.Uint32())
+	//return fmt.Sprintf("koko%d", rand.Uint32())
 }
 
 // makeVethPair makes veth pair and returns its link.
