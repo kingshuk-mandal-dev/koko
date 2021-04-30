@@ -15,7 +15,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/utils/sysctl"
 	"github.com/vishvananda/netlink"
 
-	crand "crypto/rand"
+	crand "crypto/rand"  /*+++king*/
 	docker "github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -24,6 +24,29 @@ import (
 var (
 	logger = log.New()
 )
+
+func EnableFlLog () error {
+
+	err = nil
+	aLogFile, err := os.OpenFile("koko-logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		//+++king:TODO : Add a defer sttemetment to close the file.
+		log.SetOutput(file)
+
+		log.SetFlags(log.LstdFlags | log.Lshortfile) //+++king: Add file na and line number
+
+		log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime)) //+++king : remove the time-stamp
+
+		log.SetPrefix(fmt.Sprintf("|KOKO|==> ")
+	}
+	return err
+}
+
+func resetLogPrefix() {
+	log.SetPrefix(fmt.Sprintf("|KOKO|==> ")
+}
 
 // SetLogLevel sets logger log level
 func SetLogLevel(level string) error {
@@ -71,8 +94,9 @@ func getRandomIFName() string {
 	RandomCrypto, _ := crand.Prime(crand.Reader, 128)
 	//fmt.Println(RandomCrypto.Uint64())
 	//fmt.Println(RandomCrypto.Uint64() % 16777216)
-	return fmt.Sprintf("koko%d", uint32(RandomCrypto.Uint64()%16777216))
-
+	aVxLanID := uint32(RandomCrypto.Uint64()%16777216)
+	logger.Infof("koko: create vxlan link = koko%d\n", aVxLanID)
+	return fmt.Sprintf("koko%d", aVxLanID)
 	//return fmt.Sprintf("koko%d", rand.Uint32())
 }
 
@@ -640,27 +664,37 @@ func MakeVxLan(veth1 VEth, vxlan VxLan) (err error) {
 	var link netlink.Link
 	tempLinkName1 := veth1.LinkName
 
+	blip 
+
+	log.SetPrefix(fmt.Sprintf("KOKO-MakeVxLan | %s |==> ", veth1.LinkName))
+
 	if veth1.NsName != "" {
 		tempLinkName1 = getRandomIFName()
 	}
+
+	log.Printf("Temp VxLAN Interface name =  %s", tempLinkName1)
 
 	if err = AddVxLanInterface(vxlan, tempLinkName1); err != nil {
 		if err != nil {
 			// retry once if failed. thanks meshnet-cni to pointing it out!
 			logger.Errorf("koko: cannot create vxlan interface: %+v. Retrying...", err)
+			log.Printf("koko: cannot create vxlan interface: %+v. Retrying...", err)
 			veth1.RemoveVethLink()
 			if err = AddVxLanInterface(vxlan, tempLinkName1); err != nil {
+				log.Printf("vxlan add failed: %v", err)
 				return fmt.Errorf("vxlan add failed: %v", err)
 			}
 		}
 	}
 
 	if link, err = netlink.LinkByName(tempLinkName1); err != nil {
+		log.Printf("Cannot get %s: %v", tempLinkName1, err)
 		return fmt.Errorf("Cannot get %s: %v", tempLinkName1, err)
 	}
 
 	if err = veth1.SetVethLink(link); err != nil {
 		netlink.LinkDel(link)
+		log.Printf("Cannot add IPaddr/netns failed: %v", err)
 		return fmt.Errorf("Cannot add IPaddr/netns failed: %v", err)
 	}
 
@@ -668,15 +702,18 @@ func MakeVxLan(veth1 VEth, vxlan VxLan) (err error) {
 		// need to adjast vxlan MTU as ingress
 		mtuMirror, err1 := GetMTU(veth1.MirrorIngress)
 		if err1 != nil {
+			log.Printf("failed to get %s MTU: %v", veth1.MirrorIngress, err1)
 			return fmt.Errorf("failed to get %s MTU: %v", veth1.MirrorIngress, err1)
 		}
 		mtuVxlan, err2 := GetMTU(veth1.LinkName)
 		if err2 != nil {
+			log.Printf("failed to get %s MTU: %v", veth1.LinkName, err2)
 			return fmt.Errorf("failed to get %s MTU: %v", veth1.LinkName, err2)
 		}
 
 		if mtuMirror != mtuVxlan {
 			if err := SetMTU(veth1.MirrorIngress, vxlan.MTU); err != nil {
+				log.Printf("Cannot set %s MTU to %d", veth1.MirrorIngress, vxlan.MTU)
 				return fmt.Errorf("Cannot set %s MTU to %d",
 					veth1.MirrorIngress, vxlan.MTU)
 			}
@@ -684,6 +721,7 @@ func MakeVxLan(veth1 VEth, vxlan VxLan) (err error) {
 
 		if err = veth1.SetIngressMirror(); err != nil {
 			netlink.LinkDel(link)
+			log.Printf("failed to set tc ingress mirror :%v", err)
 			return fmt.Errorf(
 				"failed to set tc ingress mirror :%v",
 				err)
@@ -693,16 +731,19 @@ func MakeVxLan(veth1 VEth, vxlan VxLan) (err error) {
 		// need to adjast vxlan MTU as egress
 		mtuMirror, err1 := GetMTU(veth1.MirrorEgress)
 		if err1 != nil {
+			log.Printf("failed to get %s MTU: %v", veth1.MirrorEgress, err1)
 			return fmt.Errorf("failed to get %s MTU: %v", veth1.MirrorEgress, err1)
 		}
 		mtuVxlan, err2 := GetMTU(veth1.LinkName)
 		if err2 != nil {
+			log.Printf("failed to get %s MTU: %v", veth1.LinkName, err2)
 			return fmt.Errorf("failed to get %s MTU: %v", veth1.LinkName, err2)
 		}
 
 		if mtuMirror != mtuVxlan {
 			if mtu1, _ := GetMTU(veth1.MirrorEgress); vxlan.MTU != mtu1 {
 				if err := SetMTU(veth1.MirrorEgress, vxlan.MTU); err != nil {
+					log.Printf("Cannot set %s MTU to %d",	veth1.MirrorEgress, vxlan.MTU)
 					return fmt.Errorf("Cannot set %s MTU to %d",
 						veth1.MirrorEgress, vxlan.MTU)
 				}
@@ -711,10 +752,11 @@ func MakeVxLan(veth1 VEth, vxlan VxLan) (err error) {
 
 		if err = veth1.SetEgressMirror(); err != nil {
 			netlink.LinkDel(link)
-			return fmt.Errorf(
-				"failed to set tc egress mirror: %v", err)
+			log.Printf("failed to set tc egress mirror: %v", err)
+			return fmt.Errorf("failed to set tc egress mirror: %v", err)
 		}
 	}
+	resetLogPrefix()
 	return nil
 }
 
