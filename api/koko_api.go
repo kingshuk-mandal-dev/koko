@@ -664,9 +664,6 @@ func MakeVxLan(veth1 VEth, vxlan VxLan) (err error) {
 	var link netlink.Link
 	tempLinkName1 := veth1.LinkName
 
-	blip  blip
-	kdfkdfkdlfklflkfdlkdkdlkdl
-
 	log.SetPrefix(fmt.Sprintf("KOKO-MakeVxLan | %s |==> ", veth1.LinkName))
 
 	if veth1.NsName != "" {
