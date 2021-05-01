@@ -99,7 +99,12 @@ func getRandomIFName() string {
 	logger.Infof("koko: genrated vxlan link name = koko%d\n", aVxLanID)
 
 	links, netLinkErr := netlink.LinkList()
-	fileLog.Printf("Netlink : CUrretnly Available links = %v", links)
+
+	if netLinkErr != nil {
+		fileLog.Printf("getRandomIFName: Netlink : Not able to get link list Error  = %v", netLinkErr)
+	} else {
+		fileLog.Printf("getRandomIFName: Netlink : CUrretnly Available links = %v", links)
+	}
 
 	return fmt.Sprintf("koko%d", aVxLanID)
 	//return fmt.Sprintf("koko%d", rand.Uint32())
@@ -182,7 +187,13 @@ func AddVxLanInterface(vxlan VxLan, devName string) (err error) {
 	}
 
 	links, netLinkErr := netlink.LinkList()
-	fileLog.Printf("Netlink : CUrretnly Available links = %v", links)
+	if netLinkErr != nil {
+		fileLog.Printf("Netlink : Not able to get link list Error  = %v", netLinkErr)
+		return fmt.Errorf("Netlink : Not able to get link list Dev = %s Error  = %v", devName, netLinkErr)
+	} else {
+		fileLog.Printf("Netlink : CUrretnly Available links = %v", links)
+	}
+
 	fileLog.Printf("Netlink : Adding VxLAN for device name = %s", devName)
 	err = netlink.LinkAdd(&vxlanconf)
 
