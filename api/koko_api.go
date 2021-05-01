@@ -96,7 +96,11 @@ func getRandomIFName() string {
 	//fmt.Println(RandomCrypto.Uint64())
 	//fmt.Println(RandomCrypto.Uint64() % 16777216)
 	aVxLanID := uint32(RandomCrypto.Uint64() % 16777216)
-	logger.Infof("koko: create vxlan link = koko%d\n", aVxLanID)
+	logger.Infof("koko: genrated vxlan link name = koko%d\n", aVxLanID)
+
+	links, netLinkErr := netlink.LinkList()
+	fileLog.Printf("Netlink : CUrretnly Available links = %v", links)
+
 	return fmt.Sprintf("koko%d", aVxLanID)
 	//return fmt.Sprintf("koko%d", rand.Uint32())
 }
@@ -112,6 +116,7 @@ func makeVethPair(name, peer string, mtu int) (netlink.Link, error) {
 		PeerName: peer,
 	}
 
+	fileLog.Printf("Netlink : Adding veth for  name = %s", name)
 	if err := netlink.LinkAdd(veth); err != nil {
 		return nil, err
 	}
@@ -146,10 +151,12 @@ func GetVethPair(name1 string, name2 string) (link1 netlink.Link,
 // AddVxLanInterface creates VxLan interface by given vxlan object
 func AddVxLanInterface(vxlan VxLan, devName string) (err error) {
 	var parentIF netlink.Link
+	fileLog.Printf("koko: create vxlan link = %s, vxlan ID = %s, under ParentIF = %s", devName, vxlan.ID, vxlan.ParentIF)
 	logger.Infof("koko: create vxlan link %s under %s", devName, vxlan.ParentIF)
 	UDPPort := 4789
 
 	if parentIF, err = netlink.LinkByName(vxlan.ParentIF); err != nil {
+		fileLog.Printf("Netlink : failed to get %s: %v", vxlan.ParentIF, err)
 		return fmt.Errorf("failed to get %s: %v", vxlan.ParentIF, err)
 	}
 
@@ -173,9 +180,14 @@ func AddVxLanInterface(vxlan VxLan, devName string) (err error) {
 	if vxlan.MTU != 0 {
 		vxlanconf.LinkAttrs.MTU = vxlan.MTU
 	}
+
+	links, netLinkErr := netlink.LinkList()
+	fileLog.Printf("Netlink : CUrretnly Available links = %v", links)
+	fileLog.Printf("Netlink : Adding VxLAN for device name = %s", devName)
 	err = netlink.LinkAdd(&vxlanconf)
 
 	if err != nil {
+		fileLog.Printf("Netlink LinkAdd : Failed to add vxlan %s: %v", devName, err)
 		return fmt.Errorf("Failed to add vxlan %s: %v", devName, err)
 	}
 	return nil
@@ -198,6 +210,7 @@ func AddVLanInterface(vlan VLan, devName string) (err error) {
 		VlanId: vlan.ID,
 	}
 
+	fileLog.Printf("Netlink : Adding vlan for device name = %s", devName)
 	if err = netlink.LinkAdd(&vlanconf); err != nil {
 		return fmt.Errorf("Failed to add vlan %s: %v", devName, err)
 	}
@@ -221,6 +234,7 @@ func AddMacVLanInterface(macvlan MacVLan, devName string) (err error) {
 		Mode: macvlan.Mode,
 	}
 
+	fileLog.Printf("Netlink : Adding MAC Vlan for device name = %s", devName)
 	if err = netlink.LinkAdd(&macvlanconf); err != nil {
 		return fmt.Errorf("Failed to add vlan %s: %v", devName, err)
 	}
@@ -665,7 +679,7 @@ func MakeVxLan(veth1 VEth, vxlan VxLan) (err error) {
 	var link netlink.Link
 	tempLinkName1 := veth1.LinkName
 
-	fileLog.SetPrefix(fmt.Sprintf("KOKO-MakeVxLan | %s |==> ", veth1.LinkName))
+	fileLog.SetPrefix(fmt.Sprintf("KOKO-MakeVxLan | link = %s | ns = %s | ParentIF = %s| ==> ", veth1.LinkName, veth1.NsName, vxlan.ParentIF))
 
 	if veth1.NsName != "" {
 		tempLinkName1 = getRandomIFName()
@@ -677,10 +691,12 @@ func MakeVxLan(veth1 VEth, vxlan VxLan) (err error) {
 		if err != nil {
 			// retry once if failed. thanks meshnet-cni to pointing it out!
 			logger.Errorf("koko: cannot create vxlan interface: %+v. Retrying...", err)
-			fileLog.Printf("koko: cannot create vxlan interface: %+v. Retrying...", err)
-			veth1.RemoveVethLink()
+			fileLog.Printf("AddVxLanInterface --> koko: cannot create vxlan interface: %+v. Retrying...", err)
+			veth1.RemoveVethLink() /*+++King: What his function does */
+
+			/* Shall we regenrate another tempNmae and use that ?? */
 			if err = AddVxLanInterface(vxlan, tempLinkName1); err != nil {
-				fileLog.Printf("vxlan add failed: %v", err)
+				fileLog.Printf("AddVxLanInterface --> vxlan add failed: %v", err)
 				return fmt.Errorf("vxlan add failed: %v", err)
 			}
 		}
